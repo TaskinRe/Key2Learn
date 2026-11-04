@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample Quiz (delete me)</title>
+<style>
+  body { font: 20px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; background: #fff; color: #111; }
+  button { font: inherit; padding: 14px 22px; margin: 6px; border-radius: 12px; border: 2px solid #1d4ed8; background: #e8efff; cursor: pointer; }
+  button:focus-visible { outline: 4px solid #93b4ff; }
+  #msg { min-height: 1.5em; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1 id="q">Loading…</h1>
+<div id="opts"></div>
+<p id="msg" aria-live="polite"></p>
+<script>
+  // A tiny example. Your own homework files do NOT need any of this:
+  // students can always press "I am finished". Using HomeworkBridge just gives
+  // the teacher scores and mistakes automatically.
+  var Q = [
+    { q: 'What is 3 + 4?', a: ['6', '7', '8'], c: '7' },
+    { q: 'What is 5 x 2?', a: ['10', '12', '7'], c: '10' },
+    { q: 'Which is bigger?', a: ['9', '19', '1'], c: '19' }
+  ];
+  var i = 0, score = 0;
+  function show() {
+    if (i >= Q.length) {
+      document.getElementById('q').textContent = 'All done! You got ' + score + ' of ' + Q.length + '.';
+      document.getElementById('opts').textContent = '';
+      if (window.HomeworkBridge) HomeworkBridge.finish({ score: score, maxScore: Q.length });
+      return;
+    }
+    document.getElementById('q').textContent = Q[i].q;
+    var box = document.getElementById('opts'); box.textContent = '';
+    Q[i].a.forEach(function (opt) {
+      var b = document.createElement('button'); b.textContent = opt;
+      b.onclick = function () {
+        var ok = opt === Q[i].c; if (ok) score++;
+        if (window.HomeworkBridge) HomeworkBridge.recordAnswer({ questionId: 'q' + (i + 1), questionText: Q[i].q, userAnswer: opt, correctAnswer: Q[i].c, isCorrect: ok });
+        document.getElementById('msg').textContent = ok ? 'Correct!' : 'Not quite. The answer is ' + Q[i].c + '.';
+        i++; setTimeout(show, 900);
+      };
+      box.appendChild(b);
+    });
+  }
+  show();
+</script>
+</body>
+</html>

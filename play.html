@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homework</title>
+</head>
+<body>
+<p style="font-family:sans-serif;padding:24px">Loading homework…</p>
+<script>
+/*
+  Homework player. This page runs inside a sandboxed frame with NO access to the
+  main site (opaque origin). The main page sends the homework HTML once; this page
+  adds the HomeworkBridge helper and writes the game into itself.
+*/
+(function () {
+  var loaded = false;
+  var BRIDGE = '<script>(' + function () {
+    // Sandboxed frames cannot use real storage; give games a temporary in-memory one so they don't crash.
+    ['localStorage', 'sessionStorage'].forEach(function (k) {
+      try { window[k].length; } catch (e) {
+        var m = {};
+        var mem = { getItem: function (x) { return Object.prototype.hasOwnProperty.call(m, x) ? m[x] : null; },
+          setItem: function (x, v) { m[x] = String(v); }, removeItem: function (x) { delete m[x]; },
+          clear: function () { m = {}; }, key: function (i) { return Object.keys(m)[i] || null; },
+          get length() { return Object.keys(m).length; } };
+        try { Object.defineProperty(window, k, { value: mem, configurable: true }); } catch (e2) {}
+      }
+    });
+    var start = Date.now(), qStart = Date.now(), answered = 0, score = 0, attempts = {}, mistakes = [];
+    function send(type, payload) { window.parent.postMessage({ type: type, payload: payload }, '*'); }
+    function str(v, n) { return String(v == null ? '' : v).slice(0, n); }
+    window.HomeworkBridge = {
+      recordAnswer: function (d) {
+        d = d || {};
+        var now = Date.now(), secs = Math.max(1, Math.round((now - qStart) / 1000)); qStart = now;
+        var id = str(d.questionId || ('q' + (answered + 1)), 60);
+        attempts[id] = (attempts[id] || 0) + 1; answered++;
+        var ok = !!d.isCorrect; if (ok) score += Number(d.points) || 1;
+        var item = { questionId: id, questionText: str(d.questionText, 300), userAnswer: str(d.userAnswer, 200),
+          correctAnswer: str(d.correctAnswer, 200), isCorrect: ok, attempts: attempts[id], seconds: secs, explanation: str(d.explanation, 400) };
+        if (!ok) mistakes.push(item);
+        send('K2L_ANSWER', { item: item, score: score, answered: answered });
+      },
+      finish: function (s) {
+        s = s || {};
+        send('K2L_FINISH', { score: s.score != null ? Number(s.score) : score,
+          maxScore: s.maxScore != null ? Number(s.maxScore) : Math.max(1, answered),
+          reflection: str(s.studentReflection, 1000), seconds: Math.round((Date.now() - start) / 1000) });
+      },
+      logEvent: function () {}, resetTimer: function () { qStart = Date.now(); }
+    };
+  } + ')();<\/script>';
+
+  window.addEventListener('message', function (e) {
+    if (loaded || e.source !== window.parent) return;
+    var d = e.data;
+    if (!d || d.type !== 'K2L_LOAD' || typeof d.html !== 'string') return;
+    loaded = true;
+    var html = d.html;
+    var withBridge = /<head[^>]*>/i.test(html)
+      ? html.replace(/<head[^>]*>/i, function (m) { return m + BRIDGE; })
+      : BRIDGE + html;
+    document.open();
+    document.write(withBridge);
+    document.close();
+  });
+  window.parent.postMessage({ type: 'K2L_PLAYER_READY' }, '*');
+})();
+</script>
+</body>
+</html>
